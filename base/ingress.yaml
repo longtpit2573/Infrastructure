@@ -1,0 +1,36 @@
+# Ingress - Routing traffic từ internet vào services
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: ftm-ingress
+  
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+    # Increase timeout cho SignalR
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+    # WebSocket support cho SignalR
+    nginx.ingress.kubernetes.io/websocket-services: "ftm-backend-service"
+spec:
+  ingressClassName: nginx
+  rules:
+  # Domain của bạn
+  - host: longops.io.vn
+    http:
+      paths:
+      # Backend API - phải đặt trước để match trước
+      - path: /api
+        pathType: Prefix
+        backend:
+          service:
+            name: ftm-backend-service
+            port:
+              number: 80
+      # Frontend - root path (match sau cùng)
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: ftm-frontend-service
+            port:
+              number: 80

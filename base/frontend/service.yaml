@@ -1,0 +1,19 @@
+# Frontend Service - Expose frontend pods
+apiVersion: v1
+kind: Service
+metadata:
+  name: ftm-frontend-service
+  
+  labels:
+    app: ftm-frontend
+spec:
+  type: ClusterIP  # Internal only, sẽ dùng Ingress để expose
+  
+  selector:
+    app: ftm-frontend
+  
+  ports:
+  - name: http
+    protocol: TCP
+    port: 80        # Service expose port 80
+    targetPort: 8080  # Nginx container chạy ở port 8080

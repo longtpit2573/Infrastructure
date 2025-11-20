@@ -1,0 +1,28 @@
+# Backend Service - Expose backend pods trong cluster
+# Service Type: ClusterIP (chỉ truy cập nội bộ cluster)
+# Sau này sẽ dùng Ingress để expose ra ngoài
+apiVersion: v1
+kind: Service
+metadata:
+  name: ftm-backend-service
+  
+  labels:
+    app: ftm-backend
+spec:
+  type: ClusterIP  # Chỉ truy cập nội bộ (không public IP)
+  
+  # Session affinity cho SignalR
+  # SignalR cần sticky session để đảm bảo client luôn connect tới cùng 1 pod
+  sessionAffinity: ClientIP
+  sessionAffinityConfig:
+    clientIP:
+      timeoutSeconds: 10800  # 3 hours
+  
+  selector:
+    app: ftm-backend
+  
+  ports:
+  - name: http
+    protocol: TCP
+    port: 80        # Port mà Service expose
+    targetPort: 80  # Port của container backend

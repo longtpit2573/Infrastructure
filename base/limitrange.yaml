@@ -1,0 +1,22 @@
+# LimitRange: Thiết lập giá trị mặc định và giới hạn cho từng Pod/Container
+# Mục đích: Đảm bảo mọi container đều có resource limits hợp lý
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: ftm-production-limits
+  
+spec:
+  limits:
+  - max:
+      cpu: "2"           # Một container không được vượt quá 2 CPU
+      memory: "2Gi"      # Một container không được vượt quá 2GB RAM
+    min:
+      cpu: "50m"         # Tối thiểu 50 milliCPU (0.05 CPU)
+      memory: "64Mi"     # Tối thiểu 64MB RAM
+    default:
+      cpu: "200m"        # Nếu không khai báo limit, mặc định là 200m CPU
+      memory: "256Mi"    # Nếu không khai báo limit, mặc định là 256MB RAM
+    defaultRequest:
+      cpu: "100m"        # Nếu không khai báo request, mặc định là 100m CPU
+      memory: "128Mi"    # Nếu không khai báo request, mặc định là 128MB RAM
+    type: Container

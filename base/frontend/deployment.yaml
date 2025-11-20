@@ -1,0 +1,97 @@
+# Frontend Deployment - React app với Nginx
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ftm-frontend
+  
+  labels:
+    app: ftm-frontend
+    tier: frontend
+spec:
+  replicas: 1
+  
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+      maxSurge: 1
+  
+  selector:
+    matchLabels:
+      app: ftm-frontend
+  
+  template:
+    metadata:
+      labels:
+        app: ftm-frontend
+        tier: frontend
+    spec:
+      nodeSelector:
+        agentpool: workerpool
+      
+      containers:
+      - name: frontend
+        # Image từ ACR frontend
+        image: acrftmfrontenddev.azurecr.io/ftm-frontend:latest
+        imagePullPolicy: Always
+        
+        ports:
+        - containerPort: 8080  # Nginx lắng nghe ở port 8080 (non-root)
+          name: http
+          protocol: TCP
+        
+        # Environment variables từ ConfigMap
+        envFrom:
+        - configMapRef:
+            name: ftm-frontend-config
+        
+        # Resource limits - Frontend nhẹ hơn Backend
+        resources:
+          requests:
+            cpu: "50m"       # 0.05 CPU
+            memory: "128Mi"  # 128MB RAM
+          limits:
+            cpu: "200m"      # 0.2 CPU
+            memory: "256Mi"  # 256MB RAM
+        
+        # Health check cho Nginx
+        livenessProbe:
+          httpGet:
+            path: /health    # Health endpoint trong nginx.conf
+            port: 8080
+          initialDelaySeconds: 15
+          periodSeconds: 10
+          timeoutSeconds: 3
+          failureThreshold: 3
+        
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+        
+        # Security context cho nginx (non-root user)
+        securityContext:
+          runAsNonRoot: true
+          runAsUser: 101  # nginx user
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+            - ALL
+        
+        # Volumes cho nginx temp files (vì readOnlyRootFilesystem: true)
+        volumeMounts:
+        - name: nginx-cache
+          mountPath: /var/cache/nginx
+        - name: nginx-tmp
+          mountPath: /tmp
+      
+      volumes:
+      - name: nginx-cache
+        emptyDir: {}
+      - name: nginx-tmp
+        emptyDir: {}

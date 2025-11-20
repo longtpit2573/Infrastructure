@@ -1,0 +1,15 @@
+# ConfigMap cho Frontend - Cấu hình React app
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ftm-frontend-config
+  
+  labels:
+    app: ftm-frontend
+data:
+  # API URL - trỏ tới backend service trong cluster
+  # Sau khi có Ingress, sẽ đổi thành: https://api.familytree.io.vn
+  API_URL: "http://ftm-backend-service"
+  
+  # App Environment
+  NODE_ENV: "production"

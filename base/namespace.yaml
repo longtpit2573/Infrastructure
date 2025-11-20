@@ -1,0 +1,10 @@
+# Tạo namespace riêng cho môi trường production
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ftm-production
+  labels:
+    name: ftm-production
+    environment: production
+    project: family-tree-management
+

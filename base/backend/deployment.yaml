@@ -1,0 +1,111 @@
+# Backend Deployment - Triển khai ứng dụng .NET
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ftm-backend
+  labels:
+    app: ftm-backend
+    tier: backend
+spec:
+  # Số lượng pod replica
+  replicas: 2
+  
+  # Chiến lược update: RollingUpdate để zero-downtime
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1  # Tối đa 1 pod down khi update
+      maxSurge: 1        # Tối đa 1 pod thêm khi update
+  
+  selector:
+    matchLabels:
+      app: ftm-backend
+  
+  template:
+    metadata:
+      labels:
+        app: ftm-backend
+        tier: backend
+    spec:
+      # Chạy pod trên node pool "workerpool" (User mode)
+      nodeSelector:
+        agentpool: workerpool
+      
+      containers:
+      - name: backend
+        # Image từ Azure Container Registry
+        image: acrftmbackenddev.azurecr.io/ftm-backend:latest
+        imagePullPolicy: Always
+        
+        ports:
+        - containerPort: 80
+          name: http
+          protocol: TCP
+        
+        # === ENVIRONMENT VARIABLES ===
+        # Đọc từ ConfigMap (không nhạy cảm)
+        envFrom:
+        - configMapRef:
+            name: ftm-backend-config
+        
+        # Đọc từ Secret (nhạy cảm)
+        env:
+        - name: JWT_ISSUER
+          valueFrom:
+            secretKeyRef:
+              name: ftm-backend-secrets
+              key: JWT_ISSUER
+        - name: JWT_AUDIENCE
+          valueFrom:
+            secretKeyRef:
+              name: ftm-backend-secrets
+              key: JWT_AUDIENCE
+        - name: JWT_SIGNING_KEY
+          valueFrom:
+            secretKeyRef:
+              name: ftm-backend-secrets
+              key: JWT_SIGNING_KEY
+        - name: SMS_BASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: ftm-backend-secrets
+              key: SMS_BASE_URL
+        - name: SMS_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: ftm-backend-secrets
+              key: SMS_API_KEY
+        - name: GMAIL_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: ftm-backend-secrets
+              key: GMAIL_USERNAME
+        - name: GMAIL_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: ftm-backend-secrets
+              key: GMAIL_PASSWORD
+        - name: GOOGLE_CLIENTID
+          valueFrom:
+            secretKeyRef:
+              name: ftm-backend-secrets
+              key: GOOGLE_CLIENTID
+        - name: GOOGLE_CLIENTSECRET
+          valueFrom:
+            secretKeyRef:
+              name: ftm-backend-secrets
+              key: GOOGLE_CLIENTSECRET
+        - name: BLOBSTORAGE
+          valueFrom:
+            secretKeyRef:
+              name: ftm-backend-secrets
+              key: BLOBSTORAGE
+
+        # Resource requests/limits
+        resources:
+          requests:
+            cpu: "100m"
+            memory: "256Mi"
+          limits:
+            cpu: "500m"
+            memory: "512Mi"

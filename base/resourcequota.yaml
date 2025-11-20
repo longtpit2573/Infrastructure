@@ -1,0 +1,16 @@
+# ResourceQuota: Giới hạn tài nguyên tổng thể trong namespace
+# Mục đích: Tránh một namespace tiêu tốn hết tài nguyên cluster
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: ftm-production-quota
+  
+spec:
+  hard:
+    requests.cpu: "2"          # Giới hạn tổng CPU request
+    requests.memory: "4Gi"     # Giới hạn tổng Memory request
+    limits.cpu: "4"            # Giới hạn tổng CPU limit
+
+    pods: "10"                 # Giới hạn số pod tối đa trong namespace
+    services: "5"              # Giới hạn số service tối đa trong namespace 
+    services.loadbalancers: "2"  # Giới hạn số LoadBalancer service

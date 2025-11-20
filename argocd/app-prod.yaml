@@ -1,0 +1,36 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: ftm-production
+  namespace: argocd
+  annotations:
+    notifications.argoproj.io/subscribe.on-sync-succeeded.slack: ftm-deployments
+    argocd-image-updater.argoproj.io/image-list: backend=acrftmbackenddev.azurecr.io/ftm-backend
+  labels:
+    project: ftm
+    environment: production
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: ftm-project
+  
+  source:
+    repoURL: https://github.com/longtpit2573/ftm-gitops.git
+    targetRevision: main
+    path: overlays/prod
+  
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: ftm-production
+  
+  syncPolicy:
+    # KHÔNG auto-sync cho production - cần manual approval
+    syncOptions:
+      - CreateNamespace=true
+      - PrunePropagationPolicy=foreground
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m

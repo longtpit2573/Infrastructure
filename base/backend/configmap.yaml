@@ -1,0 +1,32 @@
+# ConfigMap cho Backend - Chứa cấu hình KHÔNG NHẠY CẢM
+# Những giá trị này có thể public, không phải secret
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ftm-backend-config
+  
+  labels:
+    app: ftm-backend
+data:
+  # ASP.NET Core Environment
+  ASPNETCORE_ENVIRONMENT: "Production"
+
+  # ASP.NET Core URLs - Backend lắng nghe ở port 80 trong container
+  ASPNETCORE_URLS: "http://+:80"
+
+  # Thời gian JWT expire (days)
+  JWT_EXPIRE_DAYS: "1"
+
+  # SMS Prefix
+  SMS_PREFIX: "App"
+
+  # Frontend URL - Service name trong K8s
+  # Khi deploy thật sẽ đổi thành domain thật: https://familytree.io.vn
+  FE_URL: "http://ftm-frontend-service"
+
+  # Backend URL - Service name trong K8s
+  # Khi deploy thật sẽ đổi thành domain thật: https://api.familytree.io.vn
+  BE_URL: "http://ftm-backend-service"
+
+  # Google OAuth Info URL (public endpoint)
+  GOOGLE_CLIENTINFOURL: "https://www.googleapis.com/oauth2/v1/userinfo"
