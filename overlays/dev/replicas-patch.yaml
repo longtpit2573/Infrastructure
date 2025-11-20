@@ -11,4 +11,4 @@ kind: Deployment
 metadata:
   name: ftm-frontend
 spec:
-  replicas: 1
+  replicas: 2
