@@ -4,7 +4,7 @@
 
 ```
 ftm-gitops/
-├── applications/              # 🎯 Application Manifests
+├── applications/              # 🎯 Application Manifests (ArgoCD Auto-Sync)
 │   ├── base/                 # Base Kustomize configurations
 │   ├── backend/              # Backend base manifests
 │   │   ├── deployment.yaml
