@@ -18,7 +18,7 @@ spec:
   source:
     repoURL: https://github.com/longtpit2573/ftm-gitops.git  # THAY BẰNG REPO CỦA BẠN
     targetRevision: main
-    path: overlays/dev
+    path: applications/overlays/dev
   
   destination:
     server: https://kubernetes.default.svc
