@@ -11,6 +11,7 @@ resources:
 patchesStrategicMerge:
   - replicas-patch.yaml
   - ingress-patch.yaml
+  - configmap-patch.yaml
 
 # Jenkins sẽ update image tags này
 images:

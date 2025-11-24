@@ -1,0 +1,11 @@
+# Override ConfigMap for dev environment
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ftm-backend-config
+data:
+  # Frontend URL - Public domain
+  FE_URL: "http://longops.io.vn"
+  
+  # Backend URL - Public domain
+  BE_URL: "http://longops.io.vn"
