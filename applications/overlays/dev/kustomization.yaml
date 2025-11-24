@@ -4,21 +4,21 @@ kind: Kustomization
 namespace: ftm-dev
 
 resources:
-  - namespace.yaml
-  - ../../base
+- namespace.yaml
+- ../../base
 
 # Patches để customize cho dev environment
 patchesStrategicMerge:
-  - replicas-patch.yaml
-  - ingress-patch.yaml
-  - configmap-patch.yaml
+- replicas-patch.yaml
+- ingress-patch.yaml
+- configmap-patch.yaml
 
 # Jenkins sẽ update image tags này
 images:
-  - name: acrftmbackenddev.azurecr.io/ftm-backend
-    newTag: v1.0.3
-  - name: acrftmfrontenddev.azurecr.io/ftm-frontend
-    newTag: v1.0.2
+- name: acrftmbackenddev.azurecr.io/ftm-backend
+  newTag: "10"
+- name: acrftmfrontenddev.azurecr.io/ftm-frontend
+  newTag: v1.0.2
 
 commonLabels:
   environment: dev
