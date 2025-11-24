@@ -9,14 +9,14 @@ controller:
   # Resource limits for Jenkins controller
   resources:
     requests:
-      cpu: "500m"
-      memory: "1Gi"
+      cpu: "250m"
+      memory: "768Mi"
     limits:
       cpu: "2000m"
       memory: "4Gi"
   
   # Jenkins Controller JVM options
-  javaOpts: "-Xmx2g -Xms1g"
+  javaOpts: "-Xmx1536m -Xms768m"
   
   # Service type
   serviceType: ClusterIP
@@ -62,6 +62,41 @@ controller:
                 maxRequestsPerHostStr: "32"
                 
                 templates:
+                  # CI/CD Builder with Docker (using host Docker socket)
+                  - name: "docker-builder"
+                    namespace: "jenkins"
+                    label: "docker-builder"
+                    nodeUsageMode: "NORMAL"
+                    serviceAccount: "jenkins"
+                    
+                    containers:
+                      - name: "docker"
+                        image: "docker:24-cli"
+                        alwaysPullImage: false
+                        workingDir: "/home/jenkins/agent"
+                        command: "cat"
+                        ttyEnabled: true
+                        resourceRequestCpu: "100m"
+                        resourceRequestMemory: "256Mi"
+                        resourceLimitCpu: "500m"
+                        resourceLimitMemory: "512Mi"
+                      
+                      - name: "kubectl"
+                        image: "bitnami/kubectl:latest"
+                        alwaysPullImage: false
+                        workingDir: "/home/jenkins/agent"
+                        command: "cat"
+                        ttyEnabled: true
+                        resourceRequestCpu: "50m"
+                        resourceRequestMemory: "128Mi"
+                        resourceLimitCpu: "200m"
+                        resourceLimitMemory: "256Mi"
+                    
+                    volumes:
+                      - hostPathVolume:
+                          hostPath: "/var/run/docker.sock"
+                          mountPath: "/var/run/docker.sock"
+                  
                   # Backend Builder Pod Template (.NET + Docker)
                   - name: "backend-builder"
                     namespace: "jenkins"
@@ -77,10 +112,10 @@ controller:
                         command: "sleep"
                         args: "infinity"
                         ttyEnabled: true
-                        resourceRequestCpu: "500m"
-                        resourceRequestMemory: "1Gi"
-                        resourceLimitCpu: "2000m"
-                        resourceLimitMemory: "3Gi"
+                        resourceRequestCpu: "100m"
+                        resourceRequestMemory: "256Mi"
+                        resourceLimitCpu: "1000m"
+                        resourceLimitMemory: "1Gi"
                       
                       - name: "docker"
                         image: "docker:24-dind"
@@ -88,10 +123,10 @@ controller:
                         workingDir: "/home/jenkins/agent"
                         privileged: true
                         ttyEnabled: true
-                        resourceRequestCpu: "500m"
-                        resourceRequestMemory: "1Gi"
-                        resourceLimitCpu: "1500m"
-                        resourceLimitMemory: "2Gi"
+                        resourceRequestCpu: "100m"
+                        resourceRequestMemory: "256Mi"
+                        resourceLimitCpu: "800m"
+                        resourceLimitMemory: "1Gi"
                         envVars:
                           - envVar:
                               key: "DOCKER_TLS_CERTDIR"
@@ -104,10 +139,10 @@ controller:
                         command: "sleep"
                         args: "infinity"
                         ttyEnabled: true
-                        resourceRequestCpu: "100m"
-                        resourceRequestMemory: "128Mi"
-                        resourceLimitCpu: "200m"
-                        resourceLimitMemory: "256Mi"
+                        resourceRequestCpu: "25m"
+                        resourceRequestMemory: "32Mi"
+                        resourceLimitCpu: "100m"
+                        resourceLimitMemory: "128Mi"
                     
                     volumes:
                       - emptyDirVolume:
@@ -129,10 +164,10 @@ controller:
                         command: "sleep"
                         args: "infinity"
                         ttyEnabled: true
-                        resourceRequestCpu: "500m"
-                        resourceRequestMemory: "1Gi"
-                        resourceLimitCpu: "2000m"
-                        resourceLimitMemory: "2Gi"
+                        resourceRequestCpu: "100m"
+                        resourceRequestMemory: "256Mi"
+                        resourceLimitCpu: "1000m"
+                        resourceLimitMemory: "1Gi"
                       
                       - name: "docker"
                         image: "docker:24-dind"
@@ -140,10 +175,10 @@ controller:
                         workingDir: "/home/jenkins/agent"
                         privileged: true
                         ttyEnabled: true
-                        resourceRequestCpu: "500m"
-                        resourceRequestMemory: "1Gi"
-                        resourceLimitCpu: "1500m"
-                        resourceLimitMemory: "2Gi"
+                        resourceRequestCpu: "100m"
+                        resourceRequestMemory: "256Mi"
+                        resourceLimitCpu: "800m"
+                        resourceLimitMemory: "1Gi"
                         envVars:
                           - envVar:
                               key: "DOCKER_TLS_CERTDIR"
@@ -156,15 +191,31 @@ controller:
                         command: "sleep"
                         args: "infinity"
                         ttyEnabled: true
-                        resourceRequestCpu: "100m"
-                        resourceRequestMemory: "128Mi"
-                        resourceLimitCpu: "200m"
-                        resourceLimitMemory: "256Mi"
+                        resourceRequestCpu: "25m"
+                        resourceRequestMemory: "32Mi"
+                        resourceLimitCpu: "100m"
+                        resourceLimitMemory: "128Mi"
                     
                     volumes:
                       - emptyDirVolume:
                           mountPath: "/var/lib/docker"
                           memory: false
+
+# Additional agent configuration for Docker socket access
+agent:
+  volumes:
+    - type: HostPath
+      hostPath: /var/run/docker.sock
+      mountPath: /var/run/docker.sock
+  image: "jenkins/inbound-agent"
+  tag: "latest"
+  resources:
+    requests:
+      cpu: "200m"
+      memory: "256Mi"
+    limits:
+      cpu: "500m"
+      memory: "512Mi"
 
 # Persistence for Jenkins data
 persistence:
