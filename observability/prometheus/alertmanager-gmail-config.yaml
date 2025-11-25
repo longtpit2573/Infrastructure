@@ -1,0 +1,130 @@
+# Alertmanager Configuration with Gmail SMTP
+# Secret for storing Gmail app password
+
+apiVersion: v1
+kind: Secret
+metadata:
+  name: alertmanager-gmail-secret
+  namespace: monitoring
+type: Opaque
+stringData:
+  gmail-app-password: "YOUR_GMAIL_APP_PASSWORD_HERE"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: alertmanager-config
+  namespace: monitoring
+data:
+  alertmanager.yml: |
+    global:
+      resolve_timeout: 5m
+      smtp_smarthost: 'smtp.gmail.com:587'
+      smtp_from: 'alertmanager@longops.io.vn'
+      smtp_auth_username: 'your-gmail@gmail.com'
+      smtp_auth_password_file: /etc/alertmanager/secrets/gmail-app-password
+      smtp_require_tls: true
+    
+    # Template for email notifications
+    templates:
+      - '/etc/alertmanager/config/*.tmpl'
+    
+    # Routing tree
+    route:
+      group_by: ['alertname', 'cluster', 'service']
+      group_wait: 10s
+      group_interval: 10s
+      repeat_interval: 12h
+      receiver: 'gmail-notifications'
+      
+      routes:
+        # Critical alerts - immediate notification
+        - match:
+            severity: critical
+          receiver: 'gmail-critical'
+          group_wait: 0s
+          repeat_interval: 1h
+        
+        # Warning alerts - grouped notification
+        - match:
+            severity: warning
+          receiver: 'gmail-warnings'
+          repeat_interval: 4h
+        
+        # Watchdog - silence
+        - match:
+            alertname: Watchdog
+          receiver: 'null'
+    
+    # Inhibition rules
+    inhibit_rules:
+      - source_match:
+          severity: 'critical'
+        target_match:
+          severity: 'warning'
+        equal: ['alertname', 'instance']
+    
+    # Receivers
+    receivers:
+      - name: 'null'
+      
+      - name: 'gmail-notifications'
+        email_configs:
+          - to: 'your-email@gmail.com'
+            headers:
+              Subject: '[{{ .Status | toUpper }}] {{ .GroupLabels.alertname }}'
+            html: |
+              <h2>Alert: {{ .GroupLabels.alertname }}</h2>
+              <p><strong>Status:</strong> {{ .Status }}</p>
+              {{ range .Alerts }}
+              <hr>
+              <p><strong>Alert:</strong> {{ .Labels.alertname }}</p>
+              <p><strong>Severity:</strong> {{ .Labels.severity }}</p>
+              <p><strong>Summary:</strong> {{ .Annotations.summary }}</p>
+              <p><strong>Description:</strong> {{ .Annotations.description }}</p>
+              <p><strong>Started:</strong> {{ .StartsAt }}</p>
+              {{ if .EndsAt }}<p><strong>Ended:</strong> {{ .EndsAt }}</p>{{ end }}
+              {{ end }}
+      
+      - name: 'gmail-critical'
+        email_configs:
+          - to: 'your-email@gmail.com'
+            headers:
+              Subject: '🚨 [CRITICAL] {{ .GroupLabels.alertname }}'
+            html: |
+              <h1 style="color: red;">🚨 CRITICAL ALERT</h1>
+              <h2>{{ .GroupLabels.alertname }}</h2>
+              {{ range .Alerts }}
+              <hr>
+              <p><strong>Summary:</strong> {{ .Annotations.summary }}</p>
+              <p><strong>Description:</strong> {{ .Annotations.description }}</p>
+              <p><strong>Started:</strong> {{ .StartsAt }}</p>
+              <p><strong>Labels:</strong></p>
+              <ul>
+              {{ range .Labels.SortedPairs }}
+                <li>{{ .Name }}: {{ .Value }}</li>
+              {{ end }}
+              </ul>
+              {{ end }}
+      
+      - name: 'gmail-warnings'
+        email_configs:
+          - to: 'your-email@gmail.com'
+            headers:
+              Subject: '⚠️  [WARNING] {{ .GroupLabels.alertname }}'
+            html: |
+              <h2 style="color: orange;">⚠️  Warning Alert</h2>
+              <h3>{{ .GroupLabels.alertname }}</h3>
+              {{ range .Alerts }}
+              <p><strong>Summary:</strong> {{ .Annotations.summary }}</p>
+              <p><strong>Description:</strong> {{ .Annotations.description }}</p>
+              {{ end }}
+---
+# Instructions for Gmail App Password:
+# 1. Go to https://myaccount.google.com/security
+# 2. Enable 2-Step Verification if not already enabled
+# 3. Go to https://myaccount.google.com/apppasswords
+# 4. Generate a new app password for "Mail"
+# 5. Replace YOUR_GMAIL_APP_PASSWORD_HERE with the 16-character password
+# 6. Replace your-gmail@gmail.com with your actual Gmail address
+# 7. Replace your-email@gmail.com with the recipient email

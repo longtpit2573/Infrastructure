@@ -1,0 +1,236 @@
+# Prometheus Stack Values for AKS
+# kube-prometheus-stack Helm Chart
+# Includes: Prometheus, Grafana, Alertmanager, Node Exporter, Kube State Metrics
+
+fullnameOverride: prometheus
+
+# Prometheus Operator Configuration
+prometheusOperator:
+  enabled: true
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 200m
+      memory: 256Mi
+
+# Prometheus Server Configuration
+prometheus:
+  enabled: true
+  
+  prometheusSpec:
+    # Resource limits for B2s node (minimized for small cluster)
+    resources:
+      requests:
+        cpu: 100m
+        memory: 256Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi
+    
+    # Retention and storage
+    retention: 7d
+    retentionSize: "5GB"
+    
+    storageSpec:
+      volumeClaimTemplate:
+        spec:
+          accessModes: ["ReadWriteOnce"]
+          resources:
+            requests:
+              storage: 10Gi
+    
+    # Service monitors - scrape configs
+    serviceMonitorSelectorNilUsesHelmValues: false
+    podMonitorSelectorNilUsesHelmValues: false
+    
+    # Enable Thanos sidecar (for later setup)
+    thanos:
+      objectStorageConfig:
+        existingSecret:
+          name: thanos-objstore-config
+          key: objstore.yml
+    
+    # Additional scrape configs
+    additionalScrapeConfigs: []
+
+# Grafana Configuration
+grafana:
+  enabled: true
+  
+  adminPassword: "Admin@123456"
+  
+  # Ingress for Grafana
+  ingress:
+    enabled: true
+    ingressClassName: nginx
+    hosts:
+      - grafana.longops.io.vn
+    annotations:
+      cert-manager.io/cluster-issuer: letsencrypt-prod
+    tls:
+      - secretName: grafana-tls
+        hosts:
+          - grafana.longops.io.vn
+  
+  # Grafana resources
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  
+  # Persistence for dashboards
+  persistence:
+    enabled: true
+    size: 5Gi
+  
+  # Datasources (will add Loki, Tempo later)
+  datasources:
+    datasources.yaml:
+      apiVersion: 1
+      datasources:
+        - name: Prometheus
+          type: prometheus
+          url: http://prometheus-kube-prometheus-prometheus:9090
+          access: proxy
+          isDefault: true
+          editable: false
+  
+  # Pre-installed dashboards
+  dashboardProviders:
+    dashboardproviders.yaml:
+      apiVersion: 1
+      providers:
+        - name: 'default'
+          orgId: 1
+          folder: ''
+          type: file
+          disableDeletion: false
+          editable: true
+          options:
+            path: /var/lib/grafana/dashboards/default
+  
+  # Dashboard ConfigMaps (will add custom ones)
+  dashboards:
+    default:
+      kubernetes-cluster:
+        gnetId: 7249
+        revision: 1
+        datasource: Prometheus
+      node-exporter:
+        gnetId: 1860
+        revision: 27
+        datasource: Prometheus
+
+# Alertmanager Configuration
+alertmanager:
+  enabled: true
+  
+  alertmanagerSpec:
+    resources:
+      requests:
+        cpu: 50m
+        memory: 128Mi
+      limits:
+        cpu: 200m
+        memory: 256Mi
+    
+    storage:
+      volumeClaimTemplate:
+        spec:
+          accessModes: ["ReadWriteOnce"]
+          resources:
+            requests:
+              storage: 2Gi
+  
+  # Alert configuration (Gmail will be configured separately)
+  config:
+    global:
+      resolve_timeout: 5m
+    
+    route:
+      group_by: ['alertname', 'cluster', 'service']
+      group_wait: 10s
+      group_interval: 10s
+      repeat_interval: 12h
+      receiver: 'gmail'
+      routes:
+        - match:
+            alertname: Watchdog
+          receiver: 'null'
+    
+    receivers:
+      - name: 'null'
+      - name: 'gmail'
+        email_configs:
+          - to: 'your-email@gmail.com'
+            from: 'alertmanager@longops.io.vn'
+            smarthost: 'smtp.gmail.com:587'
+            auth_username: 'your-gmail@gmail.com'
+            auth_password: 'your-app-password'
+            require_tls: true
+
+# Node Exporter - collect node metrics
+nodeExporter:
+  enabled: true
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 200m
+      memory: 128Mi
+
+# Kube State Metrics - collect Kubernetes object metrics
+kubeStateMetrics:
+  enabled: true
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 200m
+      memory: 256Mi
+
+# Prometheus Node Exporter
+prometheus-node-exporter:
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 200m
+      memory: 128Mi
+
+# Service monitors for default components
+defaultRules:
+  create: true
+  rules:
+    alertmanager: true
+    etcd: false  # Not accessible in managed AKS
+    configReloaders: true
+    general: true
+    k8s: true
+    kubeApiserver: false  # Not accessible in managed AKS
+    kubeApiserverAvailability: false
+    kubeApiserverSlos: false
+    kubelet: true
+    kubeProxy: false
+    kubePrometheusGeneral: true
+    kubePrometheusNodeRecording: true
+    kubernetesApps: true
+    kubernetesResources: true
+    kubernetesStorage: true
+    kubernetesSystem: true
+    kubeScheduler: false  # Not accessible in managed AKS
+    kubeStateMetrics: true
+    network: true
+    node: true
+    nodeExporterAlerting: true
+    nodeExporterRecording: true
+    prometheus: true
+    prometheusOperator: true

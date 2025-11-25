@@ -1,0 +1,120 @@
+# Custom Alert Rules for FTM Application
+
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: ftm-application-alerts
+  namespace: monitoring
+  labels:
+    prometheus: kube-prometheus
+    role: alert-rules
+spec:
+  groups:
+    - name: ftm-backend
+      interval: 30s
+      rules:
+        - alert: FTMBackendDown
+          expr: up{job="ftm-backend"} == 0
+          for: 2m
+          labels:
+            severity: critical
+            component: backend
+          annotations:
+            summary: "FTM Backend is down"
+            description: "FTM Backend in namespace {{ $labels.namespace }} has been down for more than 2 minutes."
+        
+        - alert: FTMBackendHighErrorRate
+          expr: rate(http_requests_total{job="ftm-backend",status=~"5.."}[5m]) > 0.05
+          for: 5m
+          labels:
+            severity: warning
+            component: backend
+          annotations:
+            summary: "High error rate on FTM Backend"
+            description: "FTM Backend error rate is {{ $value | humanizePercentage }} over the last 5 minutes."
+        
+        - alert: FTMBackendHighMemory
+          expr: container_memory_usage_bytes{pod=~"ftm-backend.*"} / container_spec_memory_limit_bytes{pod=~"ftm-backend.*"} > 0.9
+          for: 5m
+          labels:
+            severity: warning
+            component: backend
+          annotations:
+            summary: "High memory usage on FTM Backend"
+            description: "FTM Backend pod {{ $labels.pod }} is using {{ $value | humanizePercentage }} of memory limit."
+        
+        - alert: FTMBackendHighCPU
+          expr: rate(container_cpu_usage_seconds_total{pod=~"ftm-backend.*"}[5m]) > 0.8
+          for: 5m
+          labels:
+            severity: warning
+            component: backend
+          annotations:
+            summary: "High CPU usage on FTM Backend"
+            description: "FTM Backend pod {{ $labels.pod }} is using {{ $value | humanizePercentage }} of CPU."
+    
+    - name: ftm-frontend
+      interval: 30s
+      rules:
+        - alert: FTMFrontendDown
+          expr: up{job="ftm-frontend"} == 0
+          for: 2m
+          labels:
+            severity: critical
+            component: frontend
+          annotations:
+            summary: "FTM Frontend is down"
+            description: "FTM Frontend in namespace {{ $labels.namespace }} has been down for more than 2 minutes."
+        
+        - alert: FTMFrontendHighMemory
+          expr: container_memory_usage_bytes{pod=~"ftm-frontend.*"} / container_spec_memory_limit_bytes{pod=~"ftm-frontend.*"} > 0.9
+          for: 5m
+          labels:
+            severity: warning
+            component: frontend
+          annotations:
+            summary: "High memory usage on FTM Frontend"
+            description: "FTM Frontend pod {{ $labels.pod }} is using {{ $value | humanizePercentage }} of memory limit."
+    
+    - name: infrastructure
+      interval: 30s
+      rules:
+        - alert: NodeHighMemoryUsage
+          expr: (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) > 0.95
+          for: 5m
+          labels:
+            severity: critical
+            component: infrastructure
+          annotations:
+            summary: "Node high memory usage"
+            description: "Node {{ $labels.instance }} has less than 5% memory available."
+        
+        - alert: NodeHighCPUUsage
+          expr: 100 - (avg by (instance) (irate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 90
+          for: 10m
+          labels:
+            severity: warning
+            component: infrastructure
+          annotations:
+            summary: "Node high CPU usage"
+            description: "Node {{ $labels.instance }} has CPU usage above 90% for more than 10 minutes."
+        
+        - alert: PodCrashLooping
+          expr: rate(kube_pod_container_status_restarts_total[15m]) > 0
+          for: 5m
+          labels:
+            severity: warning
+            component: infrastructure
+          annotations:
+            summary: "Pod is crash looping"
+            description: "Pod {{ $labels.namespace }}/{{ $labels.pod }} is restarting frequently."
+        
+        - alert: PersistentVolumeFillingUp
+          expr: (kubelet_volume_stats_available_bytes / kubelet_volume_stats_capacity_bytes) < 0.1
+          for: 5m
+          labels:
+            severity: warning
+            component: infrastructure
+          annotations:
+            summary: "PersistentVolume is filling up"
+            description: "PV {{ $labels.persistentvolumeclaim }} in {{ $labels.namespace }} has less than 10% available space."

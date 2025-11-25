@@ -1,0 +1,106 @@
+# Grafana Loki Values for Log Aggregation
+# Single Binary mode for resource efficiency
+
+loki:
+  auth_enabled: false
+  
+  commonConfig:
+    replication_factor: 1
+  
+  storage:
+    type: 'filesystem'
+  
+  schemaConfig:
+    configs:
+      - from: 2024-01-01
+        store: tsdb
+        object_store: filesystem
+        schema: v13
+        index:
+          prefix: loki_index_
+          period: 24h
+  
+  # Resource limits for B2s node
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+# Single binary deployment mode
+deploymentMode: SingleBinary
+
+singleBinary:
+  replicas: 1
+  
+  persistence:
+    enabled: true
+    size: 10Gi
+  
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+# Disable components not needed in single binary mode
+backend:
+  replicas: 0
+read:
+  replicas: 0
+write:
+  replicas: 0
+
+# Gateway/Ingress configuration
+gateway:
+  enabled: true
+  replicas: 1
+  
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 200m
+      memory: 128Mi
+  
+  ingress:
+    enabled: true
+    ingressClassName: nginx
+    hosts:
+      - host: loki.longops.io.vn
+        paths:
+          - path: /
+            pathType: Prefix
+    tls:
+      - secretName: loki-tls
+        hosts:
+          - loki.longops.io.vn
+
+# Monitoring with ServiceMonitor
+monitoring:
+  serviceMonitor:
+    enabled: true
+  selfMonitoring:
+    enabled: false
+    grafanaAgent:
+      installOperator: false
+
+# Loki Canary for testing
+lokiCanary:
+  enabled: false
+
+# Test pods
+test:
+  enabled: false
+
+# Retention configuration
+limits_config:
+  retention_period: 7d
+  max_query_length: 721h
+  max_query_parallelism: 32
+  split_queries_by_interval: 15m
